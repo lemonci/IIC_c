@@ -53,7 +53,7 @@ parser.add_argument("--num_dataloaders", type=int, default=3)
 parser.add_argument("--num_sub_heads", type=int, default=5)  # per head...
 
 parser.add_argument("--out_root", type=str,
-                    default="/scratch/shared/slow/xuji/iid_private")
+                    default="/home/monica/IIC/datasets/iid_private")
 parser.add_argument("--restart", dest="restart", default=False,
                     action="store_true")
 parser.add_argument("--restart_from_best", dest="restart_from_best",
@@ -239,13 +239,13 @@ else:
   if config.select_sub_head_on_loss:
     sub_head = get_subhead_using_loss(config, dataloaders_head_B, net,
                                       sobel=True, lamb=config.lamb)
-  _ = cluster_eval(config, net,
-                   mapping_assignment_dataloader=mapping_assignment_dataloader,
-                   mapping_test_dataloader=mapping_test_dataloader,
-                   sobel=True,
-                   use_sub_head=sub_head)
+#  _ = cluster_eval(config, net,
+#                   mapping_assignment_dataloader=mapping_assignment_dataloader,
+#                   mapping_test_dataloader=mapping_test_dataloader,
+#                   sobel=True,
+#                   use_sub_head=sub_head)
 
-  print("Pre: time %s: \n %s" % (datetime.now(), nice(config.epoch_stats[-1])))
+#  print("Pre: time %s: \n %s" % (datetime.now(), nice(config.epoch_stats[-1])))
   if config.double_eval:
     print("double eval: \n %s" % (nice(config.double_eval_stats[-1])))
   sys.stdout.flush()
@@ -372,40 +372,40 @@ for e_i in xrange(next_epoch, config.num_epochs):
   if config.select_sub_head_on_loss:
     sub_head = get_subhead_using_loss(config, dataloaders_head_B, net,
                                       sobel=True, lamb=config.lamb)
-  is_best = cluster_eval(config, net,
-                         mapping_assignment_dataloader=mapping_assignment_dataloader,
-                         mapping_test_dataloader=mapping_test_dataloader,
-                         sobel=True,
-                         use_sub_head=sub_head)
+#  is_best = cluster_eval(config, net,
+#                         mapping_assignment_dataloader=mapping_assignment_dataloader,
+#                         mapping_test_dataloader=mapping_test_dataloader,
+#                         sobel=True,
+#                         use_sub_head=sub_head)
 
-  print("Pre: time %s: \n %s" % (datetime.now(), nice(config.epoch_stats[-1])))
+#  print("Pre: time %s: \n %s" % (datetime.now(), nice(config.epoch_stats[-1])))
   if config.double_eval:
     print("     double eval: \n %s" % (nice(config.double_eval_stats[-1])))
   sys.stdout.flush()
 
+#  axarr[0].clear()
+#  axarr[0].plot(config.epoch_acc)
+#  axarr[0].set_title("acc (best), top: %f" % max(config.epoch_acc))
+
+#  axarr[1].clear()
+#  axarr[1].plot(config.epoch_avg_subhead_acc)
+#  axarr[1].set_title("acc (avg), top: %f" % max(config.epoch_avg_subhead_acc))
+
   axarr[0].clear()
-  axarr[0].plot(config.epoch_acc)
-  axarr[0].set_title("acc (best), top: %f" % max(config.epoch_acc))
+  axarr[0].plot(config.epoch_loss_head_A)
+  axarr[0].set_title("Loss head A")
 
   axarr[1].clear()
-  axarr[1].plot(config.epoch_avg_subhead_acc)
-  axarr[1].set_title("acc (avg), top: %f" % max(config.epoch_avg_subhead_acc))
+  axarr[1].plot(config.epoch_loss_no_lamb_head_A)
+  axarr[1].set_title("Loss no lamb head A")
 
   axarr[2].clear()
-  axarr[2].plot(config.epoch_loss_head_A)
-  axarr[2].set_title("Loss head A")
+  axarr[2].plot(config.epoch_loss_head_B)
+  axarr[2].set_title("Loss head B")
 
   axarr[3].clear()
-  axarr[3].plot(config.epoch_loss_no_lamb_head_A)
-  axarr[3].set_title("Loss no lamb head A")
-
-  axarr[4].clear()
-  axarr[4].plot(config.epoch_loss_head_B)
-  axarr[4].set_title("Loss head B")
-
-  axarr[5].clear()
-  axarr[5].plot(config.epoch_loss_no_lamb_head_B)
-  axarr[5].set_title("Loss no lamb head B")
+  axarr[3].plot(config.epoch_loss_no_lamb_head_B)
+  axarr[3].set_title("Loss no lamb head B")
 
   if config.double_eval:
     axarr[6].clear()
@@ -422,28 +422,28 @@ for e_i in xrange(next_epoch, config.num_epochs):
   fig.canvas.draw_idle()
   fig.savefig(os.path.join(config.out_dir, "plots.png"))
 
-  if is_best or (e_i % config.save_freq == 0):
-    net.module.cpu()
+#  if is_best or (e_i % config.save_freq == 0):
+#    net.module.cpu()
 
-    if e_i % config.save_freq == 0:
-      torch.save(net.module.state_dict(),
-                 os.path.join(config.out_dir, "latest_net.pytorch"))
-      torch.save(optimiser.state_dict(),
-                 os.path.join(config.out_dir, "latest_optimiser.pytorch"))
-      config.last_epoch = e_i  # for last saved version
+  if e_i % config.save_freq == 0:
+    torch.save(net.module.state_dict(),
+               os.path.join(config.out_dir, "latest_net.pytorch"))
+    torch.save(optimiser.state_dict(),
+               os.path.join(config.out_dir, "latest_optimiser.pytorch"))
+    config.last_epoch = e_i  # for last saved version
 
-    if is_best:
-      torch.save(net.module.state_dict(),
-                 os.path.join(config.out_dir, "best_net.pytorch"))
-      torch.save(optimiser.state_dict(),
-                 os.path.join(config.out_dir, "best_optimiser.pytorch"))
-      with open(os.path.join(config.out_dir, "best_config.pickle"),
-                'wb') as outfile:
-        pickle.dump(config, outfile)
+#    if is_best:
+#      torch.save(net.module.state_dict(),
+#                 os.path.join(config.out_dir, "best_net.pytorch"))
+#      torch.save(optimiser.state_dict(),
+#                 os.path.join(config.out_dir, "best_optimiser.pytorch"))
+#      with open(os.path.join(config.out_dir, "best_config.pickle"),
+#                'wb') as outfile:
+#        pickle.dump(config, outfile)
 
-      with open(os.path.join(config.out_dir, "best_config.txt"),
-                "w") as text_file:
-        text_file.write("%s" % config)
+#      with open(os.path.join(config.out_dir, "best_config.txt"),
+#                "w") as text_file:
+#        text_file.write("%s" % config)
 
     net.module.cuda()
 

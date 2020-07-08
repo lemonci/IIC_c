@@ -57,7 +57,7 @@ parser.add_argument("--num_dataloaders", type=int, default=3)
 parser.add_argument("--num_sub_heads", type=int, default=5)
 
 parser.add_argument("--out_root", type=str,
-                    default="/scratch/shared/slow/xuji/iid_private")
+                    default="/home/monica/IIC/out")
 parser.add_argument("--restart", dest="restart", default=False,
                     action="store_true")
 parser.add_argument("--restart_from_best", dest="restart_from_best",
@@ -129,8 +129,10 @@ config.output_k = config.output_k_B  # for eval code
 assert (config.output_k_A >= config.gt_k)
 config.eval_mode = "hung"
 
-assert ("MNIST" == config.dataset)
-dataset_class = torchvision.datasets.MNIST
+#assert ("MNIST" == config.dataset)
+#dataset_class = torchvision.datasets.MNIST
+#hymenoptera_dataset = torchvision.datasets.ImageFolder(config.dataset_root)
+#dataset_class = torch.utils.data.DataLoader(hymenoptera_dataset)
 config.train_partitions = [True, False]
 config.mapping_assignment_partitions = [True, False]
 config.mapping_test_partitions = [True, False]

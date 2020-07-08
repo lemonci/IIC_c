@@ -46,7 +46,6 @@ def custom_cutout(min_box=None, max_box=None):
 
 def sobel_process(imgs, include_rgb, using_IR=False):
   bn, c, h, w = imgs.size()
-
   if not using_IR:
     if not include_rgb:
       assert (c == 1)

@@ -12,7 +12,7 @@ def main():
   parser.add_argument("--model_inds", type=int, nargs="+",
                       default=[570, 569, 640, 579, 685])
   parser.add_argument("--out_root", type=str,
-                      default="/scratch/shared/slow/xuji/iid_private")
+                      default="/home/monica/IIC/datasets/iid_private")
 
   given_config = parser.parse_args()
 
@@ -32,7 +32,7 @@ def main():
     config.double_eval = False  # no double eval, not training (or saving config)
 
     net = archs.__dict__[config.arch](config)
-    model_path = os.path.join(config.out_dir, "best_net.pytorch")
+    model_path = os.path.join(config.out_dir, "latest_net.pytorch")
     net.load_state_dict(
       torch.load(model_path, map_location=lambda storage, loc: storage))
     net.cuda()

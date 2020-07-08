@@ -1,7 +1,6 @@
-import os
 import sys
 from datetime import datetime
-
+import os
 import torch
 import torchvision
 from torch.utils.data import ConcatDataset
@@ -11,91 +10,79 @@ from code.utils.cluster.transforms import sobel_make_transforms, \
   greyscale_make_transforms
 from code.utils.semisup.dataset import TenCropAndFinish
 from .general import reorder_train_deterministic
-
+from torchvision.transforms import ToTensor
 
 # Used by sobel and greyscale clustering twohead scripts -----------------------
 
 def cluster_twohead_create_dataloaders(config):
-  assert (config.mode == "IID")
-  assert (config.twohead)
+  """
+  My original data loading code is complex to cover all my experiments. Here is a simple version.
+  Use it to replace cluster_twohead_create_dataloaders() in the scripts.
+  
+  This uses ImageFolder but you could use your own subclass of torch.utils.data.Dataset.
+  
+  :param config: Requires num_dataloaders and values used by *make_transforms(), e.g. crop size, 
+  input size etc.
+  :return: Training and testing dataloaders
+  """
 
-  target_transform = None
+  # Change these according to your data:
+  greyscale = False
+  train_data_path = os.path.join(config.dataset_root, "train")
+  test_val_data_path = os.path.join(config.dataset_root, "test")
+  test_data_path = os.path.join(config.dataset_root, "test")
+#  assert (config.batchnorm_track)  # recommended (for test time invariance to batch size)
 
-  if "CIFAR" in config.dataset:
-    config.train_partitions_head_A = [True, False]
-    config.train_partitions_head_B = config.train_partitions_head_A
-
-    config.mapping_assignment_partitions = [True, False]
-    config.mapping_test_partitions = [True, False]
-
-    if config.dataset == "CIFAR10":
-      dataset_class = torchvision.datasets.CIFAR10
-    elif config.dataset == "CIFAR100":
-      dataset_class = torchvision.datasets.CIFAR100
-    elif config.dataset == "CIFAR20":
-      dataset_class = torchvision.datasets.CIFAR100
-      target_transform = _cifar100_to_cifar20
-    else:
-      assert (False)
-
-    # datasets produce either 2 or 5 channel images based on config.include_rgb
-    tf1, tf2, tf3 = sobel_make_transforms(config)
-
-  elif config.dataset == "STL10":
-    assert (config.mix_train)
-    if not config.stl_leave_out_unlabelled:
-      print("adding unlabelled data for STL10")
-      config.train_partitions_head_A = ["train+unlabeled", "test"]
-    else:
-      print("not using unlabelled data for STL10")
-      config.train_partitions_head_A = ["train", "test"]
-
-    config.train_partitions_head_B = ["train", "test"]
-
-    config.mapping_assignment_partitions = ["train", "test"]
-    config.mapping_test_partitions = ["train", "test"]
-
-    dataset_class = torchvision.datasets.STL10
-
-    # datasets produce either 2 or 5 channel images based on config.include_rgb
-    tf1, tf2, tf3 = sobel_make_transforms(config)
-
-  elif config.dataset == "MNIST":
-    config.train_partitions_head_A = [True, False]
-    config.train_partitions_head_B = config.train_partitions_head_A
-
-    config.mapping_assignment_partitions = [True, False]
-    config.mapping_test_partitions = [True, False]
-
-    dataset_class = torchvision.datasets.MNIST
-
+  # Transforms:
+  if greyscale:
     tf1, tf2, tf3 = greyscale_make_transforms(config)
-
   else:
-    assert (False)
+    tf1, tf2, tf3 = sobel_make_transforms(config)
 
-  print("Making datasets with %s and %s" % (dataset_class, target_transform))
-  sys.stdout.flush()
+  # Training data:
+  # main output head (B), auxiliary overclustering head (A), same data for both
+  dataloaders_head_B = [torch.utils.data.DataLoader(
+    torchvision.datasets.ImageFolder(root=train_data_path, transform=tf1),
+    batch_size=config.dataloader_batch_sz,
+    shuffle=False,
+    num_workers=0,
+    drop_last=False)] + \
+                       [torch.utils.data.DataLoader(
+                         torchvision.datasets.ImageFolder(root=train_data_path, transform=tf2),
+                         batch_size=config.dataloader_batch_sz,
+                         shuffle=False,
+                         num_workers=0,
+                         drop_last=False) for _ in range(config.num_dataloaders)]
 
-  dataloaders_head_A = \
-    _create_dataloaders(config, dataset_class, tf1, tf2,
-                        partitions=config.train_partitions_head_A,
-                        target_transform=target_transform)
+  dataloaders_head_A = [torch.utils.data.DataLoader(
+    torchvision.datasets.ImageFolder(root=train_data_path, transform=tf1),
+    batch_size=config.dataloader_batch_sz,
+    shuffle=False,
+    num_workers=0,
+    drop_last=False)] + \
+                       [torch.utils.data.DataLoader(
+                         torchvision.datasets.ImageFolder(root=train_data_path, transform=tf2),
+                         batch_size=config.dataloader_batch_sz,
+                         shuffle=False,
+                         num_workers=0,
+                         drop_last=False) for _ in range(config.num_dataloaders)]
 
-  dataloaders_head_B = \
-    _create_dataloaders(config, dataset_class, tf1, tf2,
-                        partitions=config.train_partitions_head_B,
-                        target_transform=target_transform)
+  # Testing data (labelled):
+  mapping_assignment_dataloader, mapping_test_dataloader = None, None
+  if os.path.exists(test_data_path):
+    mapping_assignment_dataloader = torch.utils.data.DataLoader(
+      torchvision.datasets.ImageFolder(test_val_data_path, transform=tf3),
+      batch_size=config.batch_sz,
+      shuffle=False,
+      num_workers=0,
+      drop_last=False)
 
-  mapping_assignment_dataloader = \
-    _create_mapping_loader(config, dataset_class, tf3,
-                           partitions=config.mapping_assignment_partitions,
-                           target_transform=target_transform)
-
-  mapping_test_dataloader = \
-    _create_mapping_loader(config, dataset_class, tf3,
-                           partitions=config.mapping_test_partitions,
-                           target_transform=target_transform)
+    mapping_test_dataloader = torch.utils.data.DataLoader(
+      torchvision.datasets.ImageFolder(test_data_path, transform=tf3),
+      batch_size=config.batch_sz,
+      shuffle=False,
+      num_workers=0,
+      drop_last=False)
 
   return dataloaders_head_A, dataloaders_head_B, \
          mapping_assignment_dataloader, mapping_test_dataloader
@@ -495,79 +482,3 @@ def _cifar100_to_cifar20(target):
      99: 13}
 
   return _dict[target]
-
-
-# Basic dataloaders --------------------------------------------------------
-
-def create_basic_clustering_dataloaders(config):
-  """
-  My original data loading code is complex to cover all my experiments. Here is a simple version.
-  Use it to replace cluster_twohead_create_dataloaders() in the scripts.
-  
-  This uses ImageFolder but you could use your own subclass of torch.utils.data.Dataset.
-  
-  :param config: Requires num_dataloaders and values used by *make_transforms(), e.g. crop size, 
-  input size etc.
-  :return: Training and testing dataloaders
-  """
-
-  # Change these according to your data:
-  greyscale = False
-  train_data_path = os.path.join(config.dataset_root, "train")
-  test_val_data_path = os.path.join(config.dataset_root, "none")
-  test_data_path = os.path.join(config.dataset_root, "none")
-  assert (config.batchnorm_track)  # recommended (for test time invariance to batch size)
-
-  # Transforms:
-  if greyscale:
-    tf1, tf2, tf3 = greyscale_make_transforms(config)
-  else:
-    tf1, tf2, tf3 = sobel_make_transforms(config)
-
-  # Training data:
-  # main output head (B), auxiliary overclustering head (A), same data for both
-  dataloaders_head_B = [torch.utils.data.DataLoader(
-    torchvision.datasets.ImageFolder(root=train_data_path, transform=tf1),
-    batch_size=config.dataloader_batch_sz,
-    shuffle=False,
-    num_workers=0,
-    drop_last=False)] + \
-                       [torch.utils.data.DataLoader(
-                         torchvision.datasets.ImageFolder(root=train_data_path, transform=tf2),
-                         batch_size=config.dataloader_batch_sz,
-                         shuffle=False,
-                         num_workers=0,
-                         drop_last=False) for _ in range(config.num_dataloaders)]
-
-  dataloaders_head_A = [torch.utils.data.DataLoader(
-    torchvision.datasets.ImageFolder(root=train_data_path, transform=tf1),
-    batch_size=config.dataloader_batch_sz,
-    shuffle=False,
-    num_workers=0,
-    drop_last=False)] + \
-                       [torch.utils.data.DataLoader(
-                         torchvision.datasets.ImageFolder(root=train_data_path, transform=tf2),
-                         batch_size=config.dataloader_batch_sz,
-                         shuffle=False,
-                         num_workers=0,
-                         drop_last=False) for _ in range(config.num_dataloaders)]
-
-  # Testing data (labelled):
-  mapping_assignment_dataloader, mapping_test_dataloader = None, None
-  if os.path.exists(test_data_path):
-    mapping_assignment_dataloader = torch.utils.data.DataLoader(
-      torchvision.datasets.ImageFolder(test_val_data_path, transform=tf3),
-      batch_size=config.batch_sz,
-      shuffle=False,
-      num_workers=0,
-      drop_last=False)
-
-    mapping_test_dataloader = torch.utils.data.DataLoader(
-      torchvision.datasets.ImageFolder(test_data_path, transform=tf3),
-      batch_size=config.batch_sz,
-      shuffle=False,
-      num_workers=0,
-      drop_last=False)
-
-  return dataloaders_head_A, dataloaders_head_B, \
-         mapping_assignment_dataloader, mapping_test_dataloader

@@ -1,0 +1,91 @@
+Config: Config: -----
+batchnorm_track: True
+save_progression: False
+data_mean: [0.5, 0.5, 0.5]
+out_dir: /home/monica/IIC/out/700
+always_rot: False
+dataset: Shicang
+num_epochs: 100
+lr_schedule: []
+mapping_test_partitions: [True, False]
+lamb_B: 1.0
+lamb_A: 1.0
+crop_other: True
+output_k_B: 3
+save_freq: 20
+output_k_A: 3
+lr_mult: 0.1
+tf3_crop_sz: 0
+input_sz: 10
+dataloader_batch_sz: 20
+eval_mode: hung
+in_channels: 1
+lr: 0.0001
+gt_k: 3
+no_flip: True
+tf3_crop_diff: False
+opt: Adam
+restart_from_best: False
+double_eval: False
+output_k: 3
+num_dataloaders: 5
+tf2_crop: random
+tf2_crop_szs: [16, 20, 24]
+head_B_epochs: 2
+num_sub_heads: 5
+crop_orig: True
+tf1_crop: centre_half
+test_code: False
+twohead: True
+tf1_crop_sz: 20
+mapping_assignment_partitions: [True, False]
+per_img_demean: False
+dataset_root: /home/monica/Shicang/Resize_white
+arch: ClusterNet6cTwoHead
+head_A_first: False
+restart: False
+batch_sz: 100
+select_sub_head_on_loss: False
+out_root: /home/monica/IIC/out
+model_ind: 700
+data_std: [0.5, 0.5, 0.5]
+head_A_epochs: 1
+demean: False
+mode: IID
+train_partitions: [True, False]
+rot_val: 10.0
+no_jitter: False
+----------
+selected centre_half crop for tf1
+tf3 crop size is same as tf1
+adding rotation option for imgs_tf: 10
+not always_rot
+selected random crop for tf2
+adding crop size option for imgs_tf: 16
+selected random crop for tf2
+adding crop size option for imgs_tf: 20
+selected random crop for tf2
+adding crop size option for imgs_tf: 24
+not adding flip
+adding jitter
+not demeaning data
+not per image demeaning data
+Making datasets with Dataset ImageFolder
+    Number of datapoints: 521
+    Root Location: /home/monica/Shicang/Resize_white
+    Transforms (if any): None
+    Target Transforms (if any): None and None
+Traceback (most recent call last):
+  File "/home/monica/anaconda3/envs/py275/lib/python2.7/runpy.py", line 174, in _run_module_as_main
+    "__main__", fname, loader, pkg_name)
+  File "/home/monica/anaconda3/envs/py275/lib/python2.7/runpy.py", line 72, in _run_code
+    exec code in run_globals
+  File "/home/monica/IIC/code/scripts/cluster/cluster_greyscale_twohead.py", line 495, in <module>
+    train()
+  File "/home/monica/IIC/code/scripts/cluster/cluster_greyscale_twohead.py", line 181, in train
+    cluster_twohead_create_dataloaders(config)
+  File "code/utils/cluster/data.py", line 95, in cluster_twohead_create_dataloaders
+    target_transform=target_transform)
+  File "code/utils/cluster/data.py", line 288, in _create_dataloaders
+    target_transform=target_transform)
+TypeError: 'ImageFolder' object is not callable
